@@ -1,0 +1,315 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+    <title>ZQueryFormValidation Manual</title>
+        <style type="text/css">
+                body {font-family:"Kalinga",Georgia,Arial,Tahoma; background: #000; color: #fff;font-size: 16px; counter-reset: lvl1;}
+                h1:before {content: counter(lvl1) " "; counter-increment: lvl1;}
+                h1 {font-size: 24px; counter-reset: lvl2;line-height: 46px;font-variant: small-caps;margin: 30px 0;}
+                h2:before {content: counter(lvl1) "." counter(lvl2) " "; counter-increment: lvl2;}
+                h2 {font-variant: small-caps;margin: 30px 0;}
+                h3 {color:#FF6666; font-variant:small-caps;}
+                h3+div {margin-left: 20px;}
+                h4 {text-decoration:underline;}
+                a[href] {color:#bbb;font-weight:bold;}
+                pre{font-size: 13px; background:#555555; border:1px solid #000000;padding:5px;line-height: 18px;}
+                pre strong{color: #FF6666;}
+                .attention{padding: 10px; background: #168575; border: 1px solid #fff;}
+                #content {width: 900px; margin: auto; background: #666; padding:20px; text-align:justify;line-height: 22px;}
+                #title {font-size: 30px;text-align: center;line-height: 46px;}
+                #author {font-size: 12px;margin-top:15px;line-height: 28px;}                
+</style>
+</head>
+<body>
+  <div id="content">
+    <div id="title">ZQueryFormValidation <br> automatically generate client side form validation from server side form validation
+      <div id="author">
+        Requirements: Zend Framework (tested with version 1.12)<br>jQuery (<a href="http://jquery.com">http://jquery.com/</a>)<br>jQueryValidation Plugin (<a href="http://jqueryvalidation.org">http://jqueryvalidation.org/</a>) + jQueryValidation Plugin Additionals (<a href="http://jqueryvalidation.org">http://jqueryvalidation.org/</a>)<br><br><br>
+        Copyright (c) 2013 - 2014<br>
+        by Christian KONCILIA<br>
+        <a href="mailto:admin@web-punk.com">admin@web-punk.com</a><br><br>
+        <a href="http://www.web-punk.com">http://www.web-punk.com</a>
+      </div>
+  </div>
+  <h1>Don't be scared</h1>
+  <p>Gosh! This manual looks pretty long... Don't worry, I can assure you that it only takes a few minutes to get ZQueryFormValidation up and running. All the basics are covered in Section "<a href="#whatiszqfv">What is ZQueryFormValidation</a>".</p>
+  <p>I assume you already know how to implement forms in Zend Framework (if not, please read <a href="http://framework.zend.com/manual/1.12/en/zend.form.html">this</a> first). Although not required, it is no mistake to know at least some of the basics of how the jQueryValidation Plugin works.</p> 
+  <h1>License</h1>
+  <p>See \library\ZQueryFormValidation\Form.php for license information.</p>
+  <h1>Version</h1>
+  <p>This is ZQueryFormValidation Version 0.4</p>
+  <h1><a id="whatiszqfv">What is ZQueryFormValidation</a></h1>
+  <p><b>Short version</b>: ZQueryFormValidation automatically generates client side form validation based on the validators (Zend_Validator) that you defined in your server side form (Zend_Form) implementation.</p>
+
+<p><b>Longer version</b>: Writing code twice is simply annoying. But that is basically exactly what you'll have to do, if you implement forms that should also be validated on the client side, i.e. while the user is filling out the form.</p> 
+
+<p>ZQueryFormValidation is a small tool that automatically generates Javascript code from the validators you use in your Zend_Form, e.g. Zend_Validate_Alnum, Zend_Validate_Between, Zend_Validate_CreditCard, Zend_Validate_EmailAddress, etc. ZQueryFormValidation uses the [jQuery Validation Plugin plugin](http://jqueryvalidation.org/) implemented by J. Zaefferer.</p>
+
+<p>Let's have a look at an example. First, you define your form as you always do using Zend_Form:</p>
+
+<pre>
+class Application_Form_ZQueryExampleForm extends Zend_Form
+{
+    public function init()
+    {
+        $this->setAction('/my/action');
+   		$this->setName('signupform');
+
+        $this->addElement('text', 'email', array(
+          'required'	=> true,
+          'validators'	=> array(
+            array('validator' => 'EmailAddress')
+          )
+        ));
+
+        $this->addElement('text', 'URL', array(
+          'description'	=> 'Provide a valid hostname',
+          'validators'	=> array(
+            array('validator' => 'Hostname')
+          )
+        ));
+       
+        $this->addElement('password', 'password', array(
+          'required'	=> true,
+          'description'	=> 'Your password (4-20 Digits/Characters)',
+          'validators'	=> array(
+            array('Regex', 
+            true, 
+            array('pattern' => '/^[A-Za-z0-9\w]{4,20}/'))
+          )
+        ));
+        $this->addElement('password', 'passwordRepeat', array(
+          'required'	=> true,
+          'description'	=> 'Repeat your password',
+          'validators'	=> array(
+            array('identical', false, array('token' => 'password'))
+          )
+        ));
+
+        $this->addElement('checkbox', 'tou', array(
+          'required'	=> true,
+          'label'	=> 'I have read and accept the Terms of Use.'
+        ));
+
+        $this->addElement('button', 'submit', array(
+          'label'	=> 'Login',
+          'type'	=> 'submit'
+        ));
+    }
+}
+</pre>
+ 
+Please note, that there is no need to change anything in your form! This is just good old fashioned Zend_Form code. All you have to do is to use the ZQueryFormValidation View-Helper in your view:
+
+<pre>
+&lt;h1&gt;Signup Form&lt;/h1&gt;
+&lt;?php 
+	echo $this->form->render();
+	<strong>echo $this->ZQueryFormValidation($this->form);</strong> 
+?&gt;
+</pre>
+
+This will automatically create a javascript code and inject it into your rendered HTML which will take care of the corresponding client side validation. For the example give above, this view helper will create the following JavaScript code
+
+<pre>
+$("#signupform").validate({
+    rules: {
+        email: {
+            required: true,
+            email: true
+        },
+        URL: {
+            url: true
+        },
+        password: {
+            required: true,
+            pattern: /^[A-Za-z0-9\w]{4,20}/
+        },
+        passwordRepeat: {
+            required: true,
+            equalTo: "#password"
+        },
+        tou: {
+            required: true
+        }
+    }
+});
+</pre>
+
+<h1>Installation</h1>
+<ol>
+<li>Download the package, e.g. <a href="https://github.com/webpunk/ZQueryFormValidation">from GitHub</a></li>
+<li>Move package to your projects directory. After that, you should have a directory <code>your/project/library/ZQueryFormValidation</code> and you should have a file <code>your/project/application/views/helpers/ZQueryFormValidation.php</code></li>
+<li>Register the namespace in your Zend Framework project, e.g. by putting <code>autoloadernamespaces.ZQueryFormValidation = "ZQueryFormValidation_"</code> in your application.ini</li>
+<li>Make sure that jQuery and the jQuery Validation Plugin are embedded (for some validators you will also need to import the <code>additional-methods.min.js</code>). For instance, use the following in your <code>layout.phtml</code>
+<pre>
+&lt;script src="https://code.jquery.com/jquery-1.10.2.min.js"&gt;&lt;/script&gt;
+&lt;script src="http://ajax.aspnetcdn.com/ajax/jquery.validate/1.11.1/jquery.validate.min.js"&gt;&lt;/script&gt;
+&lt;script src="http://ajax.aspnetcdn.com/ajax/jquery.validate/1.11.1/additional-methods.min.js"&gt;&lt;/script&gt;
+</pre>
+</li>
+<li>Test if everything worked: choose any view script which renders a Zend_Form and add 
+<pre>
+&lt;?php 
+	// assuming that $this->form has been assigned in your controller
+	// and that $this->form is an instance of Zend_Form
+	echo $this->ZQueryFormValidation($this->form);
+?&gt;
+</pre></li>
+<li>If everthing worked you should be able to open the corresponding web site and the form should validate the input on the client side.</li>
+</ol>
+
+<h1>Using the View-Helper</h1>
+<p>As described above, the basic syntax of the ZQueryFormValidation view helper is <code>echo $this->ZQueryFormValidation($this->form);</code> - optional parameters will be discussed in the next chapter.</p>
+<p>Please note that it doesn't make any difference where you put the <code>echo $this->ZQueryFormValidation($this->form);</code> statement in your view. The generated javascript code will always be rendered at the bottom of the correpsonding HTML.</p> 
+
+<h2>View-Helper Parameters</h2>
+The syntax for the ZQueryFormValidation view helper is the following:
+
+<pre>ZQueryFormValidation(Zend_Form $form, array $options = null);</pre>
+
+<p><code>$form</code> is the form whose validators will be used to generate the corresponding javascript code for the jQuery Validation Plugin.</p>
+<p><code>$options</code> is an array of key/values pairs which currently supports the following keys:</p>
+<h3>showWarnings</h3>
+<code>showWarnings</code> - a boolean parameter. If true, warnings will be echoed. Usefull during development. Default = false
+<h3>inject</h3>
+<code>inject</code> - a full path to a file which holds a code snippet that you would like to inject right after the messages section and before the rules section of the generated javascript code.
+<p>The jQueryValidation Plugin supports several callbacks which you may use for instance to define how invalid form elements will be highlighted, which HTML tags should be used to depict errors, and so on (see <a href="http://jqueryvalidation.org/validate">http://jqueryvalidation.org/validate</a> for more details)</p>
+<p>For instance you could create a file <code>your/project/application/configs/inject.js</code> with the following content:</p>
+<pre>
+// this is a JavaScript snippet that will be injected into the generated code
+// (right after the messages section and before the rules section of the generated javascript code)
+errorElement: "span",
+errorClass: "help-block",
+	    highlight: function (element, errorClass, validClass) {
+	        $(element).closest('.control-group').addClass('has-error');
+	    },
+	    unhighlight: function (element, errorClass, validClass) {
+	        $(element).closest('.control-group').removeClass('has-error');
+	    },
+	    errorPlacement: function (error, element) {
+	        if (element.parent('.input-group').length || 
+	            element.prop('type') === 'checkbox' || 
+	            element.prop('type') === 'radio') {
+	            error.insertAfter(element.parent());
+	        } else {
+	            error.insertAfter(element);
+	        }
+	    },
+</pre>
+To inject this file, simple call the view helper like this in your view:
+<pre>
+&lt;?php 
+echo $this->ZQueryFormValidation($this->form, array('inject' =&gt; 'your/project/application/configs/inject.js')); 
+?&gt;
+</pre>
+
+<h1>Advanced Options</h1>
+When defining your Zend_Form you may use the following advanced options to alter the behaviour of ZQueryFormValidation.
+<h2>Defining Client-Side Error Messages</h2>
+By default ZQueryFormValidation will not render any <code>messages</code> code snippet. Thus the default jQueryValidation plugin messages will be used. If you are not happy with these messages, you may either:
+
+<ol>
+<li>(not recommended) Use the inject option as described in the previous chapter and add a messages section in the file which will be injected into the code (see <a href="http://jqueryvalidation.org/validate">http://jqueryvalidation.org/validate</a> for more details)</li>
+<li>(recommended) use the <code>zq_messages</code> option in your Zend Form</li>
+</ol>
+ 
+<p>I strongly suggest that you use the second option as the first one somehow contradicts the idea of ZQueryFormValidation (namely to write code once)!</p>
+
+<h3>zq_messages</h3>
+<code>zq_messages</code> is an array of key / value pairs. Each key represents a Zend_Validator you use for a form element. You may also use <code>'all'</code> as key to define a message which will be used to mather which validator fails.
+<p>Example 1:</p> 
+<pre>
+$this->addElement('text', 'name', array(
+  'required'	=> true,
+  'description'	=> 'Your name',
+  <strong>'zq_messages'	=> array(
+        'required' => 'Please, enter your name',
+        'alnum'	=> 'only alphabetical characters and digits are allowed'),</strong>
+  'validators'	=> array(
+        array('Alnum')
+  )
+));
+</pre>
+
+<p>Example 2:</p> 
+<pre>
+$this->addElement('text', 'name', array(
+  'required'	=> true,
+  'description'	=> 'Your name',
+  <strong>'zq_messages'	=> array(
+        'all' => 'Please, enter your name (using only alphabetical characters and digits)',
+        )</strong>
+  'validators'	=> array(
+        array('Alnum')
+  )
+));
+</pre>
+ 
+<p>You may of course use Zend_Translate in order to enable muli-lingual support.</p>
+ 
+<h2>Ignore certain Form Elements</h2>
+Just in case you would like to disable client side validation for a form element.
+<h3>zq_ignore</h3>
+A boolean value. If true, client side validation will be disabled for this element.
+<p>Example:</p> 
+<pre>
+$this->addElement('text', 'name', array(
+  'required'	=> true,
+  'description'	=> 'Your name',
+  <strong>'zq_ignore'	=> true,</strong>
+  'validators'	=> array(
+        array('Alnum')
+  )
+));
+</pre>
+
+<h2>Forcing Client Side Validation Rules</h2>
+<p>The jQueryValidation Plugin allows you to easily extend it with your own validation rules. Several users already implemented and published their own rules (see the projects <a href="https://github.com/jzaefferer/jquery-validation/tree/master/src/additional">GitHub page</a>).</p>
+<p>If you would like to force ZQueryFormValidation to use a set of user-defined validation rules, you may use the <code>zq_forcerules</code> option:</p>
+<h3>zq_forcerules</h3>
+<code>zq_forcerules</code> is an array of validation rules which will be assigned <strong>additionally</strong> to the corresponding form element. Thus, the following example will use three rules to verify the users input on the client side: required, pattern and myownrule. 
+<p>Example:</p> 
+<pre>
+$this->addElement('text', 'time', array(
+  'required'		=> true,
+  'description'	=> 'Enter a time',
+  'zq_messages'	=> array('all' => 'Please, enter a valid time (00:00 - 23:59)'),
+  <strong>'zq_forcerules'  => array('myownrule:true'),</strong>
+  'validators' => array(
+    array('validator' => 'regex', 'options' => array('pattern' => '/^([01]\d|2[0-3])(:[0-5]\d){1,2}$/'))
+  )
+));
+</pre>
+
+<h1>This is Sparta!</h1>
+Please, keep in mind that this version of ZQueryFormValidation is still a beta version. There are several things to keep in mind and several things which are still on the ToDo list.
+
+<h3>Things to keep in mind</h3>
+<ul>
+<li><strong>Using Alnum validator</strong>: This Zend Framework validatos result in a pattern rule. The regular expression used within this pattern rule depends on the default locale. There are two things you should keep in mind here:
+<ol>
+<li>Currently, only 'de' and 'en' are supported (every other locale will result in using the pattern defined for language 'en'). However, it should be very easy to adapt the class <code>ZQueryFormValidation_Validator_Alnum</code> to your needs / language</li>
+<li>If you don't want to use the default locale, you'll have to alter the code of the class <code>ZQueryFormValidation_Validator_Alnum</code></li>
+</ol>	
+<li><strong>CreditCard</strong>: <code>Zend_Validate_CreditCard</code> allows you to disable support for different credit cards. Currently, the client side validation will always support all credit cards (ignoring the supported credit cards as defined in <code>Zend_Validate_CreditCard</code>). Thus, even if you disable support for let's say Visa, valid Visa cc numbers will be accepted on the client side.</li> 
+<li><strong>Date</strong>: Currently uses <a href="http://jqueryvalidation.org/dateISO-method/">dateISO</a> to check if a date is valid. Should be extend to support locals.</li>
+<li><strong>PostCode Validator</strong>: Currently, this is done by taking the PHP regex used by Zend Framework and assume that this regex is supported by JavaScript. This might not be the case. Please test before using!</li>
+<li><strong>Regex</strong>: when use a Zend_Validate_Regex instance, please keep in mind that not every valid PHP regex can be converted to JavaScript, e.g. a regex with recursions or lookbehind assertions. It's up to you to test if the regex you are using in Zend Framework also works in JavaScript!</li>
+</ul>
+
+<h3>Stuff not yet implemented</h3> 
+<ul>
+<li>Support for Zend Framework 2.x</li>
+<li>Add support for <code>Zend_Validate_Db_RecordExists()</code> and <code>Zend_Validate_Db_NoRecordExists()</code> (also see next point)</li>
+<li>Add support for jquery.validate remote method</li>
+<li>Add support for <code>Zend_Validate_InArray()</code></li>
+<li>Add support for <code>Zend_Validate_Isbn()</code></li>
+<li>Add support for <code>Zend_Validate_NotEmpty()</code></li>
+<li>Add support for <code>Zend_Validate_Sitemap_*()</code></li>
+<li>Integration with Zend_Cache (cache to file in order to allow client side caching of JavaScript code- would probably also require a CLI call for ZQueryFormValidation)</li>
+<li>Support Tag/Attribute style, i.e. use HTML5 attributes as supported by the jQueryValidation Plugin</li>
+</ul>
+
+</div>
+</body>  
