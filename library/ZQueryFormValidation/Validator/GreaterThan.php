@@ -12,7 +12,7 @@ class ZQueryFormValidation_Validator_GreaterThan extends ZQueryFormValidation_Va
      * @return string
      */
     public function render() {
-        return 'min:' . $this->_validator->getMin() . ',';
+        return 'min:' . $this->_validator->getMin()+1 . ',';
     }
 
     /**

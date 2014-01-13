@@ -12,7 +12,7 @@ class ZQueryFormValidation_Validator_LessThan extends ZQueryFormValidation_Valid
      * @return string
      */
     public function render() {
-        return 'max:' . $this->_validator->getMax() . ',';
+        return 'max:' . $this->_validator->getMax()-1 . ',';
     }
 
     /**
